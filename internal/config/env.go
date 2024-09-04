@@ -11,5 +11,4 @@ func GetEnv(envName string) string {
 		log.Fatalf("error getting env: %s", envName)
 	}
 	return envValue
-	
 }
