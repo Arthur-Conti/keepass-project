@@ -3,34 +3,37 @@ package services
 import (
 	"github.com/Arthur-Conti/keepass-project/internal/config"
 	"github.com/Arthur-Conti/keepass-project/internal/models"
-	"github.com/Arthur-Conti/keepass-project/internal/repositories"
+	ports_repositories "github.com/Arthur-Conti/keepass-project/internal/ports/repositories"
 )
 
+var logger = config.GetLogger()
+
 type usersService struct {
-	repository *repositories.UsersRepository
+	repository ports_repositories.UsersRepositoryInterface
 }
 
-func NewUsersService() *usersService {
+func NewUsersService(repository ports_repositories.UsersRepositoryInterface) *usersService {
 	return &usersService{
-		repository: repositories.NewUsersRepository(),
+		repository: repository,
 	}
 }
 
-func (service *usersService) ListAllUsers() {
-
+func (service *usersService) ListAllUsers() ([]models.User, error) {
+	return service.repository.ListAllUsers()
 }
 
-func (service *usersService) GetUserByID(id string) {
-
+func (service *usersService) GetUserByID(id string) (models.User, error) {
+	return service.repository.GetUserByID(id)
 }
 
-func (service *usersService) CreateUser(user models.UserModel) (error) {
+func (service *usersService) CreateUser(user models.UserModel) error {
 	userID, err := config.CreateID()
 	if err != nil {
+		logger.Error("error creating user id: " + err.Error())
 		return err
 	}
 	user.ID = userID
-	return service.repository.CreateUser(user) 
+	return service.repository.CreateUser(user)
 }
 
 func (service *usersService) UpdateUser(id string) {

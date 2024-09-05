@@ -11,6 +11,8 @@ type postgresConnection struct {
 	Password     string
 	IP           string
 	DatabaseName string
+	Context      context.Context
+	Connection   *pgx.Conn
 }
 
 func NewPostgresConnection() *postgresConnection {
@@ -22,20 +24,34 @@ func NewPostgresConnection() *postgresConnection {
 	}
 }
 
-func (postgres *postgresConnection) Connect() (*pgx.Conn, context.Context, error) {
+func (postgres *postgresConnection) Connect() error {
+	err := postgres.CreateConnection()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (postgres *postgresConnection) CreateConnection() error {
 	connectionString := fmt.Sprintf("postgres://%v:%v@%v/%v", postgres.Username, postgres.Password, postgres.IP, postgres.DatabaseName)
 	context := context.Background()
 	connection, err := pgx.Connect(context, connectionString)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	return connection, context, nil
+	postgres.Context = context
+	postgres.Connection = connection
+	return nil
 }
 
-func (postgres *postgresConnection) CloseConnection(connection *pgx.Conn, context context.Context) {
-	connection.Close(context)
+func (postgres *postgresConnection) CloseConnection() {
+	postgres.Connection.Close(postgres.Context)
 }
 
-func (postgres *postgresConnection) RunQuery(connection *pgx.Conn, context context.Context, query string, queryParams ...any) pgx.Row {
-	return connection.QueryRow(context, query, queryParams...)
+func (postgres *postgresConnection) RunQuery(query string, queryParams ...any) (pgx.Rows, error) {
+	return postgres.Connection.Query(postgres.Context, query, queryParams...)
+}
+
+func (postgres *postgresConnection) RunQueryRow(query string, queryParams ...any) pgx.Row {
+	return postgres.Connection.QueryRow(postgres.Context, query, queryParams...)
 }
